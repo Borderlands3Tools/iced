@@ -75,7 +75,7 @@ where
     fn draw(
         &mut self,
         bounds: Rectangle,
-        text_bounds: Rectangle,
+        mut text_bounds: Rectangle,
         cursor_position: Point,
         font: Font,
         size: u16,
@@ -86,6 +86,8 @@ where
         cursor: text_input_shared::cursor::Cursor,
         style_sheet: &Box<dyn StyleSheet>,
     ) -> Self::Output {
+        text_bounds.width -= 30.0;
+
         let is_mouse_over_text = bounds.contains(cursor_position);
 
         let style = if is_focused {
