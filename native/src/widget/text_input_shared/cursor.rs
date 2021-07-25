@@ -1,5 +1,5 @@
 //! Track the cursor of a text input.
-use crate::widget::text_input::Value;
+use crate::widget::text_input_shared::value::Value;
 
 /// The cursor of a text input.
 #[derive(Debug, Copy, Clone)]

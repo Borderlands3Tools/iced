@@ -20,6 +20,7 @@ pub mod scrollable;
 pub mod slider;
 pub mod svg;
 pub mod text_input;
+pub mod text_input_with_picklist;
 pub mod toggler;
 pub mod tooltip;
 
@@ -50,6 +51,8 @@ pub use scrollable::Scrollable;
 pub use slider::Slider;
 #[doc(no_inline)]
 pub use text_input::TextInput;
+#[doc(no_inline)]
+pub use text_input_with_picklist::TextInputWithPickList;
 #[doc(no_inline)]
 pub use toggler::Toggler;
 #[doc(no_inline)]

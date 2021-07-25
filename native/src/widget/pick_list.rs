@@ -37,10 +37,10 @@ where
 /// The local state of a [`PickList`].
 #[derive(Debug, Clone)]
 pub struct State<T> {
-    menu: menu::State,
-    is_open: bool,
-    hovered_option: Option<usize>,
-    last_selection: Option<T>,
+    pub menu: menu::State,
+    pub is_open: bool,
+    pub hovered_option: Option<usize>,
+    pub last_selection: Option<T>,
 }
 
 impl<T> Default for State<T> {

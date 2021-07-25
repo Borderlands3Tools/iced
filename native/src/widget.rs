@@ -36,6 +36,8 @@ pub mod space;
 pub mod svg;
 pub mod text;
 pub mod text_input;
+pub mod text_input_shared;
+pub mod text_input_with_picklist;
 pub mod toggler;
 pub mod tooltip;
 
@@ -73,6 +75,8 @@ pub use svg::Svg;
 pub use text::Text;
 #[doc(no_inline)]
 pub use text_input::TextInput;
+#[doc(no_inline)]
+pub use text_input_with_picklist::TextInputWithPickList;
 #[doc(no_inline)]
 pub use toggler::Toggler;
 #[doc(no_inline)]

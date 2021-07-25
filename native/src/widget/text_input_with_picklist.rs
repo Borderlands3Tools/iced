@@ -1,15 +1,19 @@
 //! Display fields that can be filled with text.
 //!
-//! A [`TextInput`] has some local [`State`].
+//! A [`TextInputWithPickList`] has some local [`State`].
+use std::borrow::Cow;
+
 use crate::event::{self, Event};
-use crate::keyboard;
 use crate::layout;
 use crate::mouse::{self, click};
+use crate::overlay;
+use crate::overlay::menu::{self, Menu};
 use crate::text;
 use crate::touch;
 use crate::widget::text_input_shared::cursor::Cursor;
 use crate::widget::text_input_shared::editor::Editor;
 use crate::widget::text_input_shared::value::Value;
+use crate::{keyboard, pick_list};
 use crate::{
     Clipboard, Element, Hasher, Layout, Length, Padding, Point, Rectangle,
     Size, Widget,
@@ -21,30 +25,33 @@ use crate::{
 /// ```
 /// # use iced_native::{text_input_shared, renderer::Null};
 /// #
-/// # pub type TextInput<'a, Message> = iced_native::TextInput<'a, Message, Null>;
+/// # pub type TextInputWithPickList<'a, Message> = iced_native::TextInputWithPickList<'a, Message, Null>;
 /// #[derive(Debug, Clone)]
 /// enum Message {
-///     TextInputChanged(String),
+///     TextInputWithPickListChanged(String),
 /// }
 ///
 /// let mut state = text_input_shared::State::new();
 /// let value = "Some text";
 ///
-/// let input = TextInput::new(
+/// let input = TextInputWithPickList::new(
 ///     &mut state,
 ///     "This is the placeholder...",
 ///     value,
-///     Message::TextInputChanged,
+///     Message::TextInputWithPickListChanged,
 /// )
 /// .padding(10);
 /// ```
 /// ![Text input drawn by `iced_wgpu`](https://github.com/hecrj/iced/blob/7760618fb112074bc40b148944521f312152012a/docs/images/text_input.png?raw=true)
 #[allow(missing_debug_implementations)]
-pub struct TextInput<'a, Message, Renderer: self::Renderer> {
-    state: &'a mut State,
+pub struct TextInputWithPickList<'a, T, Message, Renderer: self::Renderer>
+where
+    [T]: ToOwned<Owned = Vec<T>>,
+{
+    state: &'a mut State<T>,
+    // Text Input
     placeholder: String,
     value: Value,
-    is_secure: bool,
     font: Renderer::Font,
     width: Length,
     max_width: u32,
@@ -52,36 +59,47 @@ pub struct TextInput<'a, Message, Renderer: self::Renderer> {
     size: Option<u16>,
     on_change: Box<dyn Fn(String) -> Message>,
     on_submit: Option<Message>,
-    style: Renderer::Style,
     select_all_first_click: bool,
+    // Pick List
+    options: Cow<'a, [T]>,
+    selected: Option<T>,
+    on_selected: Box<dyn Fn(T) -> Message>,
+    // Style
+    style: <Renderer as self::Renderer>::Style,
 }
 
-impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
+impl<'a, T: 'a, Message, Renderer>
+    TextInputWithPickList<'a, T, Message, Renderer>
 where
+    T: ToString + Eq,
+    [T]: ToOwned<Owned = Vec<T>>,
     Message: Clone,
     Renderer: self::Renderer,
 {
-    /// Creates a new [`TextInput`].
+    /// Creates a new [`TextInputWithPickList`].
     ///
     /// It expects:
     /// - some [`State`]
     /// - a placeholder
     /// - the current value
-    /// - a function that produces a message when the [`TextInput`] changes
+    /// - a function that produces a message when the [`TextInputWithPickList`] changes
     pub fn new<F>(
-        state: &'a mut State,
+        state: &'a mut State<T>,
         placeholder: &str,
         value: &str,
+        selected: Option<T>,
+        options: impl Into<Cow<'a, [T]>>,
         on_change: F,
+        on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self
     where
         F: 'static + Fn(String) -> Message,
     {
-        TextInput {
+        TextInputWithPickList {
             state,
+            // Text Input
             placeholder: String::from(placeholder),
             value: Value::new(value),
-            is_secure: false,
             font: Default::default(),
             width: Length::Fill,
             max_width: u32::MAX,
@@ -89,15 +107,14 @@ where
             size: None,
             on_change: Box::new(on_change),
             on_submit: None,
-            style: Renderer::Style::default(),
             select_all_first_click: false,
+            // Pick List
+            options: options.into(),
+            selected,
+            on_selected: Box::new(on_selected),
+            // Style
+            style: Default::default(),
         }
-    }
-
-    /// Converts the [`TextInput`] into a secure password input.
-    pub fn password(mut self) -> Self {
-        self.is_secure = true;
-        self
     }
 
     /// Sets the [`Font`] of the [`Text`].
@@ -108,57 +125,62 @@ where
         self.font = font;
         self
     }
-    /// Sets the width of the [`TextInput`].
+    /// Sets the width of the [`TextInputWithPickList`].
     pub fn width(mut self, width: Length) -> Self {
         self.width = width;
         self
     }
 
-    /// Sets the maximum width of the [`TextInput`].
+    /// Sets the maximum width of the [`TextInputWithPickList`].
     pub fn max_width(mut self, max_width: u32) -> Self {
         self.max_width = max_width;
         self
     }
 
-    /// Sets the [`Padding`] of the [`TextInput`].
+    /// Sets the [`Padding`] of the [`TextInputWithPickList`].
     pub fn padding<P: Into<Padding>>(mut self, padding: P) -> Self {
         self.padding = padding.into();
         self
     }
 
-    /// Sets the text size of the [`TextInput`].
+    /// Sets the text size of the [`TextInputWithPickList`].
     pub fn size(mut self, size: u16) -> Self {
         self.size = Some(size);
         self
     }
 
-    /// Sets the message that should be produced when the [`TextInput`] is
+    /// Sets the message that should be produced when the [`TextInputWithPickList`] is
     /// focused and the enter key is pressed.
     pub fn on_submit(mut self, message: Message) -> Self {
         self.on_submit = Some(message);
         self
     }
 
-    /// Sets the style of the [`TextInput`].
-    pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
+    /// Sets the style of the [`TextInputWithPickList`].
+    pub fn style(
+        mut self,
+        style: impl Into<<Renderer as self::Renderer>::Style>,
+    ) -> Self {
         self.style = style.into();
         self
     }
 
-    /// Sets the option to select all of the input text on the first click of the [`TextInput`].
+    /// Sets the option to select all of the input text on the first click of the [`TextInputWithPickList`].
     pub fn select_all_first_click(mut self, select: bool) -> Self {
         self.select_all_first_click = select;
         self
     }
 
-    /// Returns the current [`State`] of the [`TextInput`].
-    pub fn state(&self) -> &State {
+    /// Returns the current [`State`] of the [`TextInputWithPickList`].
+    pub fn state(&self) -> &State<T> {
         self.state
     }
 }
 
-impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
+impl<'a, T, Message, Renderer> TextInputWithPickList<'a, T, Message, Renderer>
 where
+    T: Clone + ToString + Eq,
+    [T]: ToOwned<Owned = Vec<T>>,
     Renderer: self::Renderer,
 {
     /// Draws the [`TextInput`] with the given [`Renderer`], overriding its
@@ -174,41 +196,30 @@ where
         let bounds = layout.bounds();
         let text_bounds = layout.children().next().unwrap().bounds();
 
-        if self.is_secure {
-            self::Renderer::draw(
-                renderer,
-                bounds,
-                text_bounds,
-                cursor_position,
-                self.font,
-                self.size.unwrap_or(renderer.default_size()),
-                &self.placeholder,
-                &value.secure(),
-                &self.state,
-                &self.style,
-            )
-        } else {
-            self::Renderer::draw(
-                renderer,
-                bounds,
-                text_bounds,
-                cursor_position,
-                self.font,
-                self.size.unwrap_or(renderer.default_size()),
-                &self.placeholder,
-                value,
-                &self.state,
-                &self.style,
-            )
-        }
+        self::Renderer::draw(
+            renderer,
+            bounds,
+            text_bounds,
+            cursor_position,
+            self.font,
+            self.size.unwrap_or(renderer.default_size()),
+            &self.placeholder,
+            self.padding,
+            value,
+            self.state.is_focused,
+            self.state.cursor,
+            &self.style,
+        )
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for TextInput<'a, Message, Renderer>
+impl<'a, T, Message, Renderer> Widget<Message, Renderer>
+    for TextInputWithPickList<'a, T, Message, Renderer>
 where
+    T: Clone + ToString + Eq,
+    [T]: ToOwned<Owned = Vec<T>>,
     Message: Clone,
-    Renderer: self::Renderer,
+    Renderer: self::Renderer + 'a,
 {
     fn width(&self) -> Length {
         self.width
@@ -254,6 +265,41 @@ where
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
                 let is_clicked = layout.bounds().contains(cursor_position);
 
+                if self.state.pick_list.is_open {
+                    self.state.pick_list.is_open =
+                        cursor_position.x < 0.0 || cursor_position.y < 0.0;
+
+                    if let Some(last_selection) =
+                        self.state.pick_list.last_selection.take()
+                    {
+                        messages.push((self.on_selected)(last_selection));
+
+                        self.state.pick_list.is_open = false;
+                    }
+
+                    return event::Status::Captured;
+                }
+
+                let arrow_down_bounds = Rectangle {
+                    x: layout.bounds().x + layout.bounds().width
+                        - f32::from(self.padding.horizontal())
+                        - 30.0,
+                    y: layout.bounds().y,
+                    ..layout.bounds()
+                };
+
+                if arrow_down_bounds.contains(cursor_position) {
+                    let selected = self.selected.as_ref();
+
+                    self.state.pick_list.is_open = true;
+                    self.state.pick_list.hovered_option = self
+                        .options
+                        .iter()
+                        .position(|option| Some(option) == selected);
+
+                    return event::Status::Captured;
+                }
+
                 self.state.is_focused = is_clicked;
 
                 if self.select_all_first_click && !is_clicked {
@@ -272,11 +318,7 @@ where
                     match click.kind() {
                         click::Kind::Single => {
                             if target > 0.0 {
-                                let value = if self.is_secure {
-                                    self.value.secure()
-                                } else {
-                                    self.value.clone()
-                                };
+                                let value = self.value.clone();
 
                                 if self.select_all_first_click
                                     && self.state.first_click
@@ -290,7 +332,8 @@ where
                                             self.font,
                                             self.size,
                                             &value,
-                                            &self.state,
+                                            self.state.is_focused,
+                                            self.state.cursor,
                                             target,
                                         );
 
@@ -305,23 +348,20 @@ where
                             }
                         }
                         click::Kind::Double => {
-                            if self.is_secure {
-                                self.state.cursor.select_all(&self.value);
-                            } else {
-                                let position = renderer.find_cursor_position(
-                                    text_layout.bounds(),
-                                    self.font,
-                                    self.size,
-                                    &self.value,
-                                    &self.state,
-                                    target,
-                                );
+                            let position = renderer.find_cursor_position(
+                                text_layout.bounds(),
+                                self.font,
+                                self.size,
+                                &self.value,
+                                self.state.is_focused,
+                                self.state.cursor,
+                                target,
+                            );
 
-                                self.state.cursor.select_range(
-                                    self.value.previous_start_of_word(position),
-                                    self.value.next_end_of_word(position),
-                                );
-                            }
+                            self.state.cursor.select_range(
+                                self.value.previous_start_of_word(position),
+                                self.value.next_end_of_word(position),
+                            );
 
                             self.state.is_dragging = false;
                         }
@@ -348,18 +388,15 @@ where
                     let target = position.x - text_layout.bounds().x;
 
                     if target > 0.0 {
-                        let value = if self.is_secure {
-                            self.value.secure()
-                        } else {
-                            self.value.clone()
-                        };
+                        let value = self.value.clone();
 
                         let position = renderer.find_cursor_position(
                             text_layout.bounds(),
                             self.font,
                             self.size,
                             &value,
-                            &self.state,
+                            self.state.is_focused,
+                            self.state.cursor,
                             target,
                         );
 
@@ -407,15 +444,7 @@ where
                                 .selection(&self.value)
                                 .is_none()
                         {
-                            if self.is_secure {
-                                let cursor_pos =
-                                    self.state.cursor.end(&self.value);
-                                self.state.cursor.select_range(0, cursor_pos);
-                            } else {
-                                self.state
-                                    .cursor
-                                    .select_left_by_words(&self.value);
-                            }
+                            self.state.cursor.select_left_by_words(&self.value);
                         }
 
                         let mut editor = Editor::new(
@@ -436,17 +465,9 @@ where
                                 .selection(&self.value)
                                 .is_none()
                         {
-                            if self.is_secure {
-                                let cursor_pos =
-                                    self.state.cursor.end(&self.value);
-                                self.state
-                                    .cursor
-                                    .select_range(cursor_pos, self.value.len());
-                            } else {
-                                self.state
-                                    .cursor
-                                    .select_right_by_words(&self.value);
-                            }
+                            self.state
+                                .cursor
+                                .select_right_by_words(&self.value);
                         }
 
                         let mut editor = Editor::new(
@@ -460,9 +481,7 @@ where
                         messages.push(message);
                     }
                     keyboard::KeyCode::Left => {
-                        if platform::is_jump_modifier_pressed(modifiers)
-                            && !self.is_secure
-                        {
+                        if platform::is_jump_modifier_pressed(modifiers) {
                             if modifiers.shift() {
                                 self.state
                                     .cursor
@@ -479,9 +498,7 @@ where
                         }
                     }
                     keyboard::KeyCode::Right => {
-                        if platform::is_jump_modifier_pressed(modifiers)
-                            && !self.is_secure
-                        {
+                        if platform::is_jump_modifier_pressed(modifiers) {
                             if modifiers.shift() {
                                 self.state
                                     .cursor
@@ -644,39 +661,72 @@ where
         self.padding.hash(state);
         self.size.hash(state);
     }
+
+    fn overlay(
+        &mut self,
+        layout: Layout<'_>,
+    ) -> Option<overlay::Element<'_, Message, Renderer>> {
+        if self.state.pick_list.is_open {
+            let bounds = layout.bounds();
+
+            let mut menu = Menu::new(
+                &mut self.state.pick_list.menu,
+                &self.options,
+                &mut self.state.pick_list.hovered_option,
+                &mut self.state.pick_list.last_selection,
+            )
+            .width(bounds.width.round() as u16)
+            .padding(self.padding)
+            .font(self.font)
+            .style(Renderer::menu_style(&self.style));
+
+            if let Some(size) = self.size {
+                menu = menu.text_size(size);
+            }
+
+            Some(menu.overlay(layout.position(), bounds.height))
+        } else {
+            None
+        }
+    }
 }
 
-/// The renderer of a [`TextInput`].
+/// The renderer of a [`TextInputWithPickList`].
 ///
 /// Your [renderer] will need to implement this trait before being
-/// able to use a [`TextInput`] in your user interface.
+/// able to use a [`TextInputWithPickList`] in your user interface.
 ///
 /// [renderer]: crate::renderer
-pub trait Renderer: text::Renderer + Sized {
+pub trait Renderer: text::Renderer + menu::Renderer + Sized {
     /// The style supported by this renderer.
     type Style: Default;
 
-    /// Returns the width of the value of the [`TextInput`].
+    /// Returns the width of the value of the [`TextInputWithPickList`].
     fn measure_value(&self, value: &str, size: u16, font: Self::Font) -> f32;
 
     /// Returns the current horizontal offset of the value of the
-    /// [`TextInput`].
+    /// [`TextInputWithPickList`].
     ///
     /// This is the amount of horizontal scrolling applied when the [`Value`]
-    /// does not fit the [`TextInput`].
+    /// does not fit the [`TextInputWithPickList`].
     fn offset(
         &self,
         text_bounds: Rectangle,
         font: Self::Font,
         size: u16,
         value: &Value,
-        state: &State,
+        is_focused: bool,
+        cursor: Cursor,
     ) -> f32;
 
-    /// Draws a [`TextInput`].
+    fn menu_style(
+        style: &<Self as Renderer>::Style,
+    ) -> <Self as menu::Renderer>::Style;
+
+    /// Draws a [`TextInputWithPickList`].
     ///
     /// It receives:
-    /// - the bounds of the [`TextInput`]
+    /// - the bounds of the [`TextInputWithPickList`]
     /// - the bounds of the text (i.e. the current value)
     /// - the cursor position
     /// - the placeholder to show when the value is empty
@@ -690,25 +740,29 @@ pub trait Renderer: text::Renderer + Sized {
         font: Self::Font,
         size: u16,
         placeholder: &str,
+        padding: Padding,
         value: &Value,
-        state: &State,
-        style: &Self::Style,
+        is_focused: bool,
+        cursor: Cursor,
+        style: &<Self as Renderer>::Style,
     ) -> Self::Output;
 
     /// Computes the position of the text cursor at the given X coordinate of
-    /// a [`TextInput`].
+    /// a [`TextInputWithPickList`].
     fn find_cursor_position(
         &self,
         text_bounds: Rectangle,
         font: Self::Font,
         size: Option<u16>,
         value: &Value,
-        state: &State,
+        is_focused: bool,
+        cursor: Cursor,
         x: f32,
     ) -> usize {
         let size = size.unwrap_or(self.default_size());
 
-        let offset = self.offset(text_bounds, font, size, &value, &state);
+        let offset =
+            self.offset(text_bounds, font, size, &value, is_focused, cursor);
 
         find_cursor_position(
             self,
@@ -722,22 +776,23 @@ pub trait Renderer: text::Renderer + Sized {
     }
 }
 
-impl<'a, Message, Renderer> From<TextInput<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, T: 'a, Message, Renderer> Into<Element<'a, Message, Renderer>>
+    for TextInputWithPickList<'a, T, Message, Renderer>
 where
+    T: Clone + ToString + Eq,
+    [T]: ToOwned<Owned = Vec<T>>,
+    Renderer: self::Renderer + 'a,
     Message: 'a + Clone,
-    Renderer: 'a + self::Renderer,
 {
-    fn from(
-        text_input: TextInput<'a, Message, Renderer>,
-    ) -> Element<'a, Message, Renderer> {
-        Element::new(text_input)
+    fn into(self) -> Element<'a, Message, Renderer> {
+        Element::new(self)
     }
 }
 
-/// The state of a [`TextInput`].
+/// The state of a [`TextInputWithPickList`].
 #[derive(Debug, Default, Clone)]
-pub struct State {
+pub struct State<T> {
+    pick_list: pick_list::State<T>,
     is_focused: bool,
     is_dragging: bool,
     is_pasting: Option<Value>,
@@ -748,15 +803,16 @@ pub struct State {
     // TODO: Add stateful horizontal scrolling offset
 }
 
-impl State {
-    /// Creates a new [`State`], representing an unfocused [`TextInput`].
+impl<T: Default> State<T> {
+    /// Creates a new [`State`], representing an unfocused [`TextInputWithPickList`].
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Creates a new [`State`], representing a focused [`TextInput`].
+    /// Creates a new [`State`], representing a focused [`TextInputWithPickList`].
     pub fn focused() -> Self {
         Self {
+            pick_list: pick_list::State::default(),
             is_focused: true,
             is_dragging: false,
             is_pasting: None,
@@ -767,42 +823,42 @@ impl State {
         }
     }
 
-    /// Returns whether the [`TextInput`] is currently focused or not.
+    /// Returns whether the [`TextInputWithPickList`] is currently focused or not.
     pub fn is_focused(&self) -> bool {
         self.is_focused
     }
 
-    /// Returns the [`Cursor`] of the [`TextInput`].
+    /// Returns the [`Cursor`] of the [`TextInputWithPickList`].
     pub fn cursor(&self) -> Cursor {
         self.cursor
     }
 
-    /// Focuses the [`TextInput`].
+    /// Focuses the [`TextInputWithPickList`].
     pub fn focus(&mut self) {
         self.is_focused = true;
     }
 
-    /// Unfocuses the [`TextInput`].
+    /// Unfocuses the [`TextInputWithPickList`].
     pub fn unfocus(&mut self) {
         self.is_focused = false;
     }
 
-    /// Moves the [`Cursor`] of the [`TextInput`] to the front of the input text.
+    /// Moves the [`Cursor`] of the [`TextInputWithPickList`] to the front of the input text.
     pub fn move_cursor_to_front(&mut self) {
         self.cursor.move_to(0);
     }
 
-    /// Moves the [`Cursor`] of the [`TextInput`] to the end of the input text.
+    /// Moves the [`Cursor`] of the [`TextInputWithPickList`] to the end of the input text.
     pub fn move_cursor_to_end(&mut self) {
         self.cursor.move_to(usize::MAX);
     }
 
-    /// Moves the [`Cursor`] of the [`TextInput`] to an arbitrary location.
+    /// Moves the [`Cursor`] of the [`TextInputWithPickList`] to an arbitrary location.
     pub fn move_cursor_to(&mut self, position: usize) {
         self.cursor.move_to(position);
     }
 
-    /// Selects all the content of the [`TextInput`].
+    /// Selects all the content of the [`TextInputWithPickList`].
     pub fn select_all(&mut self) {
         self.cursor.select_range(0, usize::MAX);
     }
