@@ -53,7 +53,7 @@ pub struct TextInput<'a, Message, Renderer: self::Renderer> {
     on_change: Box<dyn Fn(String) -> Message>,
     on_submit: Option<Message>,
     style: Renderer::Style,
-    select_all_first_click: bool,
+    select_all_on_click: bool,
 }
 
 impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
@@ -90,7 +90,7 @@ where
             on_change: Box::new(on_change),
             on_submit: None,
             style: Renderer::Style::default(),
-            select_all_first_click: false,
+            select_all_on_click: false,
         }
     }
 
@@ -146,8 +146,8 @@ where
     }
 
     /// Sets the option to select all of the input text on the first click of the [`TextInput`].
-    pub fn select_all_first_click(mut self, select: bool) -> Self {
-        self.select_all_first_click = select;
+    pub fn select_all_on_click(mut self, select: bool) -> Self {
+        self.select_all_on_click = select;
         self
     }
 
@@ -256,10 +256,6 @@ where
 
                 self.state.is_focused = is_clicked;
 
-                if self.select_all_first_click && !is_clicked {
-                    self.state.first_click = true;
-                }
-
                 if is_clicked {
                     let text_layout = layout.children().next().unwrap();
                     let target = cursor_position.x - text_layout.bounds().x;
@@ -278,11 +274,8 @@ where
                                     self.value.clone()
                                 };
 
-                                if self.select_all_first_click
-                                    && self.state.first_click
-                                {
+                                if self.select_all_on_click {
                                     self.state.cursor.select_all(&value);
-                                    self.state.first_click = false;
                                 } else {
                                     let position = renderer
                                         .find_cursor_position(
@@ -744,7 +737,6 @@ pub struct State {
     last_click: Option<mouse::Click>,
     cursor: Cursor,
     keyboard_modifiers: keyboard::Modifiers,
-    first_click: bool,
     // TODO: Add stateful horizontal scrolling offset
 }
 
@@ -763,7 +755,6 @@ impl State {
             last_click: None,
             cursor: Cursor::default(),
             keyboard_modifiers: keyboard::Modifiers::default(),
-            first_click: false,
         }
     }
 
