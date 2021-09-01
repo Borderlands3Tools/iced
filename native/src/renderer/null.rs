@@ -1,9 +1,4 @@
-use crate::{
-    button, checkbox, column, container, pane_grid, progress_bar, radio, row,
-    scrollable, slider, text, text_input, toggler, Color, Element, Font,
-    HorizontalAlignment, Layout, Padding, Point, Rectangle, Renderer, Size,
-    Vector, VerticalAlignment,
-};
+use crate::{button, checkbox, column, container, pane_grid, progress_bar, radio, row, scrollable, slider, text, text_input, toggler, Color, Element, Font, HorizontalAlignment, Layout, Padding, Point, Rectangle, Renderer, Size, Vector, VerticalAlignment, text_input_shared};
 
 /// A renderer that does nothing.
 ///
@@ -135,7 +130,7 @@ impl text_input::Renderer for Null {
         _text_bounds: Rectangle,
         _font: Font,
         _size: u16,
-        _value: &text_input::Value,
+        _value: &text_input_shared::value::Value,
         _state: &text_input::State,
     ) -> f32 {
         0.0
@@ -149,7 +144,7 @@ impl text_input::Renderer for Null {
         _font: Font,
         _size: u16,
         _placeholder: &str,
-        _value: &text_input::Value,
+        _value: &text_input_shared::value::Value,
         _state: &text_input::State,
         _style: &Self::Style,
     ) -> Self::Output {
