@@ -27,10 +27,9 @@ mod platform {
     pub use {
         button::Button, checkbox::Checkbox, container::Container, image::Image,
         pane_grid::PaneGrid, pick_list::PickList, progress_bar::ProgressBar,
-        radio::Radio, rule::Rule, scrollable::Scrollable, slider::Slider,
-        svg::Svg, text_input::TextInput,
-        text_input_with_picklist::TextInputWithPickList, toggler::Toggler,
-        tooltip::Tooltip,
+        radio::Radio, rule::Rule, scrollable::Scrollable,
+        searchable_pick_list::SearchablePickList, slider::Slider, svg::Svg,
+        text_input::TextInput, toggler::Toggler, tooltip::Tooltip,
     };
 
     #[cfg(any(feature = "canvas", feature = "glow_canvas"))]
@@ -47,8 +46,8 @@ mod platform {
     pub use crate::renderer::widget::qr_code;
     pub use crate::renderer::widget::{
         button, checkbox, container, pane_grid, pick_list, progress_bar, radio,
-        rule, scrollable, slider, text_input, text_input_with_picklist,
-        toggler, tooltip, Column, Row, Space, Text,
+        rule, scrollable, searchable_pick_list, slider, text_input, toggler,
+        tooltip, Column, Row, Space, Text,
     };
 
     #[cfg_attr(docsrs, doc(cfg(feature = "image")))]

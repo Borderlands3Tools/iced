@@ -18,9 +18,9 @@ pub mod progress_bar;
 pub mod radio;
 pub mod rule;
 pub mod scrollable;
+pub mod searchable_pick_list;
 pub mod slider;
 pub mod text_input;
-pub mod text_input_with_picklist;
 pub mod toggler;
 pub mod tooltip;
 
@@ -43,11 +43,11 @@ pub use rule::Rule;
 #[doc(no_inline)]
 pub use scrollable::Scrollable;
 #[doc(no_inline)]
+pub use searchable_pick_list::SearchablePickList;
+#[doc(no_inline)]
 pub use slider::Slider;
 #[doc(no_inline)]
 pub use text_input::TextInput;
-#[doc(no_inline)]
-pub use text_input_with_picklist::TextInputWithPickList;
 #[doc(no_inline)]
 pub use toggler::Toggler;
 #[doc(no_inline)]

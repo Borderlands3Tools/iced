@@ -16,7 +16,7 @@ pub mod progress_bar;
 pub mod radio;
 pub mod rule;
 pub mod scrollable;
+pub mod searchable_pick_list;
 pub mod slider;
 pub mod text_input;
-pub mod text_input_with_picklist;
 pub mod toggler;
