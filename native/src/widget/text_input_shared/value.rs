@@ -56,21 +56,25 @@ impl Value {
     /// Returns the position of the next end of a word from the given grapheme
     /// `index`.
     pub fn next_end_of_word(&self, index: usize) -> usize {
-        let next_string = &self.graphemes[index..].concat();
+        if self.graphemes.len() >= index {
+            let next_string = &self.graphemes[index..].concat();
 
-        UnicodeSegmentation::split_word_bound_indices(&next_string as &str)
-            .filter(|(_, word)| !word.trim_start().is_empty())
-            .next()
-            .map(|(i, next_word)| {
-                index
-                    + UnicodeSegmentation::graphemes(next_word, true).count()
-                    + UnicodeSegmentation::graphemes(
+            UnicodeSegmentation::split_word_bound_indices(&next_string as &str)
+                .filter(|(_, word)| !word.trim_start().is_empty())
+                .next()
+                .map(|(i, next_word)| {
+                    index
+                        + UnicodeSegmentation::graphemes(next_word, true).count()
+                        + UnicodeSegmentation::graphemes(
                         &next_string[..i] as &str,
                         true,
                     )
-                    .count()
-            })
-            .unwrap_or(self.len())
+                        .count()
+                })
+                .unwrap_or(self.len())
+        } else {
+            self.len()
+        }
     }
 
     /// Returns a new [`Value`] containing the graphemes from `start` until the
