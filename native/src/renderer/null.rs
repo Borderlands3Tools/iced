@@ -1,4 +1,9 @@
-use crate::{button, checkbox, column, container, pane_grid, progress_bar, radio, row, scrollable, slider, text, text_input, toggler, Color, Element, Font, HorizontalAlignment, Layout, Padding, Point, Rectangle, Renderer, Size, Vector, VerticalAlignment, text_input_shared};
+use crate::{
+    button, checkbox, column, container, pane_grid, progress_bar, radio, row,
+    scrollable, slider, text, text_input, toggler, Color, Element, Font,
+    HorizontalAlignment, Layout, Padding, Point, Rectangle, Renderer, Size,
+    VerticalAlignment,
+};
 
 /// A renderer that does nothing.
 ///
@@ -70,8 +75,8 @@ impl text::Renderer for Null {
         _bounds: Size,
         _point: Point,
         _nearest_only: bool,
-    ) -> text::Hit {
-        text::Hit::NearestCharOffset(0, Vector::new(0., 0.))
+    ) -> Option<text::Hit> {
+        None
     }
 
     fn draw(
@@ -130,7 +135,7 @@ impl text_input::Renderer for Null {
         _text_bounds: Rectangle,
         _font: Font,
         _size: u16,
-        _value: &text_input_shared::value::Value,
+        _value: &text_input::Value,
         _state: &text_input::State,
     ) -> f32 {
         0.0
@@ -144,7 +149,7 @@ impl text_input::Renderer for Null {
         _font: Font,
         _size: u16,
         _placeholder: &str,
-        _value: &text_input_shared::value::Value,
+        _value: &text_input::Value,
         _state: &text_input::State,
         _style: &Self::Style,
     ) -> Self::Output {

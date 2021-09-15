@@ -1,25 +1,34 @@
 //! Display fields that can be filled with text.
 //!
 //! A [`TextInput`] has some local [`State`].
+mod editor;
+mod value;
+
+pub mod cursor;
+
+pub use cursor::Cursor;
+pub use value::Value;
+
+use editor::Editor;
+
 use crate::event::{self, Event};
 use crate::keyboard;
 use crate::layout;
 use crate::mouse::{self, click};
 use crate::text;
 use crate::touch;
-use crate::widget::text_input_shared::cursor::Cursor;
-use crate::widget::text_input_shared::editor::Editor;
-use crate::widget::text_input_shared::value::Value;
 use crate::{
     Clipboard, Element, Hasher, Layout, Length, Padding, Point, Rectangle,
     Size, Widget,
 };
 
+use std::u32;
+
 /// A field that can be filled with text.
 ///
 /// # Example
 /// ```
-/// # use iced_native::{text_input_shared, renderer::Null};
+/// # use iced_native::{text_input, renderer::Null};
 /// #
 /// # pub type TextInput<'a, Message> = iced_native::TextInput<'a, Message, Null>;
 /// #[derive(Debug, Clone)]
@@ -27,7 +36,7 @@ use crate::{
 ///     TextInputChanged(String),
 /// }
 ///
-/// let mut state = text_input_shared::State::new();
+/// let mut state = text_input::State::new();
 /// let value = "Some text";
 ///
 /// let input = TextInput::new(
@@ -53,7 +62,6 @@ pub struct TextInput<'a, Message, Renderer: self::Renderer> {
     on_change: Box<dyn Fn(String) -> Message>,
     on_submit: Option<Message>,
     style: Renderer::Style,
-    select_all_on_click: bool,
 }
 
 impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
@@ -90,7 +98,6 @@ where
             on_change: Box::new(on_change),
             on_submit: None,
             style: Renderer::Style::default(),
-            select_all_on_click: false,
         }
     }
 
@@ -142,12 +149,6 @@ where
     /// Sets the style of the [`TextInput`].
     pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
         self.style = style.into();
-        self
-    }
-
-    /// Sets the option to select all of the input text on the first click of the [`TextInput`].
-    pub fn select_all_on_click(mut self, select: bool) -> Self {
-        self.select_all_on_click = select;
         self
     }
 
@@ -267,48 +268,42 @@ where
 
                     match click.kind() {
                         click::Kind::Single => {
-                            if target > 0.0 {
+                            let position = if target > 0.0 {
                                 let value = if self.is_secure {
                                     self.value.secure()
                                 } else {
                                     self.value.clone()
                                 };
 
-                                if self.select_all_on_click {
-                                    self.state.cursor.select_all(&value);
-                                } else {
-                                    let position = renderer
-                                        .find_cursor_position(
-                                            text_layout.bounds(),
-                                            self.font,
-                                            self.size,
-                                            &value,
-                                            &self.state,
-                                            target,
-                                        );
-
-                                    self.state.cursor.move_to(position);
-
-                                    self.state.is_dragging = true;
-                                }
+                                renderer.find_cursor_position(
+                                    text_layout.bounds(),
+                                    self.font,
+                                    self.size,
+                                    &value,
+                                    &self.state,
+                                    target,
+                                )
                             } else {
-                                self.state.cursor.move_to(0);
+                                None
+                            };
 
-                                self.state.is_dragging = true;
-                            }
+                            self.state.cursor.move_to(position.unwrap_or(0));
+                            self.state.is_dragging = true;
                         }
                         click::Kind::Double => {
                             if self.is_secure {
                                 self.state.cursor.select_all(&self.value);
                             } else {
-                                let position = renderer.find_cursor_position(
-                                    text_layout.bounds(),
-                                    self.font,
-                                    self.size,
-                                    &self.value,
-                                    &self.state,
-                                    target,
-                                );
+                                let position = renderer
+                                    .find_cursor_position(
+                                        text_layout.bounds(),
+                                        self.font,
+                                        self.size,
+                                        &self.value,
+                                        &self.state,
+                                        target,
+                                    )
+                                    .unwrap_or(0);
 
                                 self.state.cursor.select_range(
                                     self.value.previous_start_of_word(position),
@@ -347,14 +342,16 @@ where
                             self.value.clone()
                         };
 
-                        let position = renderer.find_cursor_position(
-                            text_layout.bounds(),
-                            self.font,
-                            self.size,
-                            &value,
-                            &self.state,
-                            target,
-                        );
+                        let position = renderer
+                            .find_cursor_position(
+                                text_layout.bounds(),
+                                self.font,
+                                self.size,
+                                &value,
+                                &self.state,
+                                target,
+                            )
+                            .unwrap_or(0);
 
                         self.state.cursor.select_range(
                             self.state.cursor.start(&value),
@@ -708,7 +705,7 @@ pub trait Renderer: text::Renderer + Sized {
         value: &Value,
         state: &State,
         x: f32,
-    ) -> usize {
+    ) -> Option<usize> {
         let size = size.unwrap_or(self.default_size());
 
         let offset = self.offset(text_bounds, font, size, &value, &state);
@@ -721,7 +718,7 @@ pub trait Renderer: text::Renderer + Sized {
             Point::new(x + offset, text_bounds.height / 2.0),
             true,
         )
-        .cursor()
+        .map(text::Hit::cursor)
     }
 }
 
