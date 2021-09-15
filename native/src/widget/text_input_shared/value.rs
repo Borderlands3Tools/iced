@@ -64,11 +64,12 @@ impl Value {
                 .next()
                 .map(|(i, next_word)| {
                     index
-                        + UnicodeSegmentation::graphemes(next_word, true).count()
+                        + UnicodeSegmentation::graphemes(next_word, true)
+                            .count()
                         + UnicodeSegmentation::graphemes(
-                        &next_string[..i] as &str,
-                        true,
-                    )
+                            &next_string[..i] as &str,
+                            true,
+                        )
                         .count()
                 })
                 .unwrap_or(self.len())

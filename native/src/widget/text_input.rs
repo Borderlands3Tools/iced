@@ -1,22 +1,15 @@
 //! Display fields that can be filled with text.
 //!
 //! A [`TextInput`] has some local [`State`].
-mod editor;
-mod value;
-
-pub mod cursor;
-
-pub use cursor::Cursor;
-pub use value::Value;
-
-use editor::Editor;
-
 use crate::event::{self, Event};
 use crate::keyboard;
 use crate::layout;
 use crate::mouse::{self, click};
 use crate::text;
 use crate::touch;
+use crate::widget::text_input_shared::cursor::Cursor;
+use crate::widget::text_input_shared::editor::Editor;
+use crate::widget::text_input_shared::value::Value;
 use crate::{
     Clipboard, Element, Hasher, Layout, Length, Padding, Point, Rectangle,
     Size, Widget,
@@ -62,6 +55,7 @@ pub struct TextInput<'a, Message, Renderer: self::Renderer> {
     on_change: Box<dyn Fn(String) -> Message>,
     on_submit: Option<Message>,
     style: Renderer::Style,
+    select_all_on_click: bool,
 }
 
 impl<'a, Message, Renderer> TextInput<'a, Message, Renderer>
@@ -98,6 +92,7 @@ where
             on_change: Box::new(on_change),
             on_submit: None,
             style: Renderer::Style::default(),
+            select_all_on_click: false,
         }
     }
 
@@ -149,6 +144,12 @@ where
     /// Sets the style of the [`TextInput`].
     pub fn style(mut self, style: impl Into<Renderer::Style>) -> Self {
         self.style = style.into();
+        self
+    }
+
+    /// Sets the option to select all of the input text on the first click of the [`TextInput`].
+    pub fn select_all_on_click(mut self, select: bool) -> Self {
+        self.select_all_on_click = select;
         self
     }
 
@@ -268,13 +269,13 @@ where
 
                     match click.kind() {
                         click::Kind::Single => {
-                            let position = if target > 0.0 {
-                                let value = if self.is_secure {
-                                    self.value.secure()
-                                } else {
-                                    self.value.clone()
-                                };
+                            let value = if self.is_secure {
+                                self.value.secure()
+                            } else {
+                                self.value.clone()
+                            };
 
+                            let position = if target > 0.0 {
                                 renderer.find_cursor_position(
                                     text_layout.bounds(),
                                     self.font,
@@ -287,8 +288,14 @@ where
                                 None
                             };
 
-                            self.state.cursor.move_to(position.unwrap_or(0));
-                            self.state.is_dragging = true;
+                            if self.select_all_on_click {
+                                self.state.cursor.select_all(&value);
+                            } else {
+                                self.state
+                                    .cursor
+                                    .move_to(position.unwrap_or(0));
+                                self.state.is_dragging = true;
+                            }
                         }
                         click::Kind::Double => {
                             if self.is_secure {
