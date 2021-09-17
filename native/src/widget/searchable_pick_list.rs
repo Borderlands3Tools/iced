@@ -295,6 +295,8 @@ where
                             event::Status::Captured
                         } else {
                             // Otherwise the user must have clicked inside the text field
+                            self.state.is_focused = true;
+
                             if self.select_all_first_click && !is_clicked {
                                 self.state.first_click = true;
                             }
