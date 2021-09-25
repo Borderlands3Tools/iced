@@ -62,6 +62,7 @@ where
     select_all_first_click: bool,
     // Pick List
     options: Cow<'a, [T]>,
+    options_empty_message: Option<String>,
     selected: Option<T>,
     on_selected: Box<dyn Fn(T) -> Message>,
     // Style
@@ -109,6 +110,7 @@ where
             select_all_first_click: false,
             // Pick List
             options: options.into(),
+            options_empty_message: None,
             selected,
             on_selected: Box::new(on_selected),
             // Style
@@ -173,6 +175,12 @@ where
     /// Returns the current [`State`] of the [`SearchablePickList`].
     pub fn state(&self) -> &State<T> {
         self.state
+    }
+
+    /// Sets the message to show if the options list of the [`SearchablePickList`] is empty.
+    pub fn options_empty_message(mut self, message: String) -> Self {
+        self.options_empty_message = Some(message);
+        self
     }
 }
 
@@ -691,6 +699,7 @@ where
             let mut menu = Menu::new(
                 &mut self.state.pick_list.menu,
                 &self.options,
+                &self.options_empty_message,
                 &mut self.state.pick_list.hovered_option,
                 &mut self.state.pick_list.last_selection,
             )

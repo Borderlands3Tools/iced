@@ -44,6 +44,7 @@ where
         cursor_position: Point,
         viewport: &Rectangle,
         options: &[T],
+        options_empty_message: &Option<String>,
         hovered_option: Option<usize>,
         padding: Padding,
         text_size: u16,
@@ -63,6 +64,58 @@ where
             ((offset + viewport.height) / option_height as f32).ceil() as usize;
 
         let visible_options = &options[start..end.min(options.len())];
+
+        if let Some(message) = options_empty_message {
+            if visible_options.is_empty() {
+                let i = start;
+                let is_selected = hovered_option == Some(i);
+
+                let bounds = Rectangle {
+                    x: bounds.x,
+                    y: bounds.y + (option_height * i) as f32,
+                    width: bounds.width,
+                    height: f32::from(text_size + padding.vertical()),
+                };
+
+                if is_selected {
+                    primitives.push(Primitive::Quad {
+                        bounds,
+                        background: style.selected_background,
+                        border_color: Color::TRANSPARENT,
+                        border_width: 0.0,
+                        border_radius: 0.0,
+                    });
+                }
+
+                primitives.push(Primitive::Text {
+                    content: message.to_owned(),
+                    bounds: Rectangle {
+                        x: bounds.x + padding.left as f32,
+                        y: bounds.center_y(),
+                        width: f32::INFINITY,
+                        ..bounds
+                    },
+                    size: f32::from(text_size),
+                    font,
+                    color: if is_selected {
+                        style.selected_text_color
+                    } else {
+                        style.text_color
+                    },
+                    horizontal_alignment: HorizontalAlignment::Left,
+                    vertical_alignment: VerticalAlignment::Center,
+                });
+
+                return (
+                    Primitive::Group { primitives },
+                    if is_mouse_over {
+                        mouse::Interaction::Pointer
+                    } else {
+                        mouse::Interaction::default()
+                    },
+                );
+            }
+        }
 
         for (i, option) in visible_options.iter().enumerate() {
             let i = start + i;

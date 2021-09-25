@@ -351,6 +351,7 @@ where
             let mut menu = Menu::new(
                 &mut self.menu,
                 &self.options,
+                &None,
                 &mut self.hovered_option,
                 &mut self.last_selection,
             )
