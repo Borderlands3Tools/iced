@@ -1,20 +1,19 @@
 //! Display fields that can be filled with text.
 //!
 //! A [`TextInput`] has some local [`State`].
+use crate::alignment;
+use crate::backend::{self, Backend};
+use crate::{
+    Background, Color, Font, Point, Primitive, Rectangle, Renderer, Size,
+    Vector,
+};
+
+use iced_native::mouse;
+use iced_native::text_input::{self, cursor};
 use std::f32;
 
 pub use iced_native::text_input::State;
-use iced_native::text_input::{self};
-use iced_native::text_input_shared::cursor;
-use iced_native::{mouse, text_input_shared};
-use iced_native::{
-    Background, Color, Font, HorizontalAlignment, Point, Rectangle, Size,
-    Vector, VerticalAlignment,
-};
 pub use iced_style::text_input::{Style, StyleSheet};
-
-use crate::backend::{self, Backend};
-use crate::{Primitive, Renderer};
 
 /// A field that can be filled with text.
 ///
@@ -42,7 +41,7 @@ where
         text_bounds: Rectangle,
         font: Font,
         size: u16,
-        value: &text_input_shared::value::Value,
+        value: &text_input::Value,
         state: &text_input::State,
     ) -> f32 {
         if state.is_focused() {
@@ -76,7 +75,7 @@ where
         font: Font,
         size: u16,
         placeholder: &str,
-        value: &text_input_shared::value::Value,
+        value: &text_input::Value,
         state: &text_input::State,
         style_sheet: &Self::Style,
     ) -> Self::Output {
@@ -118,8 +117,8 @@ where
                 ..text_bounds
             },
             size: f32::from(size),
-            horizontal_alignment: HorizontalAlignment::Left,
-            vertical_alignment: VerticalAlignment::Center,
+            horizontal_alignment: alignment::Horizontal::Left,
+            vertical_alignment: alignment::Vertical::Center,
         };
 
         let (contents_primitive, offset) = if state.is_focused() {
@@ -247,7 +246,7 @@ where
 fn measure_cursor_and_scroll_offset<B>(
     renderer: &Renderer<B>,
     text_bounds: Rectangle,
-    value: &text_input_shared::value::Value,
+    value: &text_input::Value,
     size: u16,
     cursor_index: usize,
     font: Font,
