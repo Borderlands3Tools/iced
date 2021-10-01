@@ -7,9 +7,9 @@ use crate::{
     Background, Color, Font, Point, Primitive, Rectangle, Renderer, Size,
     Vector,
 };
-
-use iced_native::mouse;
-use iced_native::text_input::{self, cursor};
+use iced_native::text_input;
+use iced_native::text_input_shared::cursor;
+use iced_native::{mouse, text_input_shared};
 use std::f32;
 
 pub use iced_native::text_input::State;
@@ -41,7 +41,7 @@ where
         text_bounds: Rectangle,
         font: Font,
         size: u16,
-        value: &text_input::Value,
+        value: &text_input_shared::value::Value,
         state: &text_input::State,
     ) -> f32 {
         if state.is_focused() {
@@ -75,7 +75,7 @@ where
         font: Font,
         size: u16,
         placeholder: &str,
-        value: &text_input::Value,
+        value: &text_input_shared::value::Value,
         state: &text_input::State,
         style_sheet: &Self::Style,
     ) -> Self::Output {
@@ -246,7 +246,7 @@ where
 fn measure_cursor_and_scroll_offset<B>(
     renderer: &Renderer<B>,
     text_bounds: Rectangle,
-    value: &text_input::Value,
+    value: &text_input_shared::value::Value,
     size: u16,
     cursor_index: usize,
     font: Font,

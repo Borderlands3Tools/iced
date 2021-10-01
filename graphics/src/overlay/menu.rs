@@ -101,8 +101,8 @@ where
                     } else {
                         style.text_color
                     },
-                    horizontal_alignment: HorizontalAlignment::Left,
-                    vertical_alignment: VerticalAlignment::Center,
+                    horizontal_alignment: alignment::Horizontal::Left,
+                    vertical_alignment: alignment::Vertical::Center,
                 });
 
                 return (

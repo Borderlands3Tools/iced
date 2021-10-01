@@ -1,4 +1,3 @@
-use crate::alignment;
 use crate::button;
 use crate::checkbox;
 use crate::column;
@@ -12,6 +11,7 @@ use crate::slider;
 use crate::text;
 use crate::text_input;
 use crate::toggler;
+use crate::{alignment, text_input_shared};
 use crate::{
     Color, Element, Font, Layout, Padding, Point, Rectangle, Renderer, Size,
 };
@@ -146,7 +146,7 @@ impl text_input::Renderer for Null {
         _text_bounds: Rectangle,
         _font: Font,
         _size: u16,
-        _value: &text_input::Value,
+        _value: &text_input_shared::value::Value,
         _state: &text_input::State,
     ) -> f32 {
         0.0
@@ -160,7 +160,7 @@ impl text_input::Renderer for Null {
         _font: Font,
         _size: u16,
         _placeholder: &str,
-        _value: &text_input::Value,
+        _value: &text_input_shared::value::Value,
         _state: &text_input::State,
         _style: &Self::Style,
     ) -> Self::Output {
