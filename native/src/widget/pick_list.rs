@@ -38,11 +38,11 @@ where
 /// The local state of a [`PickList`].
 #[derive(Debug, Clone)]
 pub struct State<T> {
-    menu: menu::State,
+    pub(crate) menu: menu::State,
     keyboard_modifiers: keyboard::Modifiers,
-    is_open: bool,
-    hovered_option: Option<usize>,
-    last_selection: Option<T>,
+    pub(crate) is_open: bool,
+    pub(crate) hovered_option: Option<usize>,
+    pub(crate) last_selection: Option<T>,
 }
 
 impl<T> State<T> {
@@ -330,6 +330,7 @@ where
         let mut menu = Menu::new(
             &mut state.menu,
             options,
+            &None,
             &mut state.hovered_option,
             &mut state.last_selection,
         )

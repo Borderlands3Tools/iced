@@ -116,6 +116,16 @@ pub mod scrollable {
         iced_native::widget::Scrollable<'a, Message, crate::Renderer>;
 }
 
+pub mod searchable_pick_list {
+    //! Display a dropdown list of selectable values.
+    pub use iced_native::overlay::menu::Style as Menu;
+    pub use iced_native::widget::searchable_pick_list::{State, StyleSheet};
+
+    /// A widget allowing the selection of a single value from a list of options.
+    pub type SearchablePickList<'a, T, Message> =
+        iced_native::widget::SearchablePickList<'a, T, Message, crate::Renderer>;
+}
+
 pub mod toggler {
     //! Show toggle controls using togglers.
     pub use iced_native::widget::toggler::{Style, StyleSheet};
@@ -161,6 +171,7 @@ pub use progress_bar::ProgressBar;
 pub use radio::Radio;
 pub use rule::Rule;
 pub use scrollable::Scrollable;
+pub use searchable_pick_list::SearchablePickList;
 pub use slider::Slider;
 pub use text_input::TextInput;
 pub use toggler::Toggler;

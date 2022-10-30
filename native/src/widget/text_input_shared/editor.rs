@@ -1,5 +1,7 @@
-use crate::widget::text_input::{Cursor, Value};
+use crate::widget::text_input_shared::cursor::Cursor;
+use crate::widget::text_input_shared::value::Value;
 
+/// The editor of a text input.
 pub struct Editor<'a> {
     value: &'a mut Value,
     cursor: &'a mut Cursor,

@@ -14,6 +14,8 @@
 A cross-platform GUI library for Rust focused on simplicity and type-safety.
 Inspired by [Elm].
 
+Modify By WShon, for [Borderlands 3 Save Editor](https://github.com/Borderlands3Tools/bl3_save_edit.git). Fork from [ZakisM](https://github.com/ZakisM/iced.git).
+
 <a href="https://gfycat.com/littlesanehalicore">
   <img src="https://thumbs.gfycat.com/LittleSaneHalicore-small.gif" height="350px">
 </a>

@@ -1,15 +1,6 @@
 //! Display fields that can be filled with text.
 //!
 //! A [`TextInput`] has some local [`State`].
-mod editor;
-mod value;
-
-pub mod cursor;
-
-pub use cursor::Cursor;
-pub use value::Value;
-
-use editor::Editor;
 
 use crate::alignment;
 use crate::event::{self, Event};
@@ -19,6 +10,10 @@ use crate::mouse::{self, click};
 use crate::renderer;
 use crate::text::{self, Text};
 use crate::touch;
+use crate::widget::text_input_shared::cursor;
+use crate::widget::text_input_shared::cursor::Cursor;
+use crate::widget::text_input_shared::editor::Editor;
+use crate::widget::text_input_shared::value::Value;
 use crate::{
     Clipboard, Color, Element, Layout, Length, Padding, Point, Rectangle,
     Shell, Size, Vector, Widget,

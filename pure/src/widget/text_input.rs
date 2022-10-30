@@ -8,6 +8,7 @@ use iced_native::mouse;
 use iced_native::renderer;
 use iced_native::text;
 use iced_native::widget::text_input;
+use iced_native::widget::text_input_shared::value::Value;
 use iced_native::{Clipboard, Length, Padding, Point, Rectangle, Shell};
 
 pub use iced_style::text_input::{Style, StyleSheet};
@@ -35,7 +36,7 @@ pub use iced_style::text_input::{Style, StyleSheet};
 #[allow(missing_debug_implementations)]
 pub struct TextInput<'a, Message, Renderer: text::Renderer> {
     placeholder: String,
-    value: text_input::Value,
+    value: Value,
     is_secure: bool,
     font: Renderer::Font,
     width: Length,
@@ -63,7 +64,7 @@ where
     {
         TextInput {
             placeholder: String::from(placeholder),
-            value: text_input::Value::new(value),
+            value: Value::new(value),
             is_secure: false,
             font: Default::default(),
             width: Length::Fill,

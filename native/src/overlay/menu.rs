@@ -21,6 +21,7 @@ pub use iced_style::menu::Style;
 pub struct Menu<'a, T, Renderer: text::Renderer> {
     state: &'a mut State,
     options: &'a [T],
+    options_empty_message: &'a Option<String>,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Option<T>,
     width: u16,
@@ -40,12 +41,14 @@ where
     pub fn new(
         state: &'a mut State,
         options: &'a [T],
+        options_empty_message: &'a Option<String>,
         hovered_option: &'a mut Option<usize>,
         last_selection: &'a mut Option<T>,
     ) -> Self {
         Menu {
             state,
             options,
+            options_empty_message,
             hovered_option,
             last_selection,
             width: 0,
@@ -136,6 +139,7 @@ where
         let Menu {
             state,
             options,
+            options_empty_message,
             hovered_option,
             last_selection,
             width,
@@ -148,6 +152,7 @@ where
         let container =
             Container::new(Scrollable::new(&mut state.scrollable).push(List {
                 options,
+                options_empty_message,
                 hovered_option,
                 last_selection,
                 font,
@@ -264,6 +269,7 @@ where
 
 struct List<'a, T, Renderer: text::Renderer> {
     options: &'a [T],
+    options_empty_message: &'a Option<String>,
     hovered_option: &'a mut Option<usize>,
     last_selection: &'a mut Option<T>,
     padding: Padding,
@@ -296,11 +302,19 @@ where
         let limits = limits.width(Length::Fill).height(Length::Shrink);
         let text_size = self.text_size.unwrap_or(renderer.default_size());
 
+        let options_len = if self.options_empty_message.is_some()
+            && self.options.is_empty()
+        {
+            1
+        } else {
+            self.options.len()
+        };
+
         let size = {
             let intrinsic = Size::new(
                 0.0,
                 f32::from(text_size + self.padding.vertical())
-                    * self.options.len() as f32,
+                    * options_len as f32,
             );
 
             limits.resolve(intrinsic)

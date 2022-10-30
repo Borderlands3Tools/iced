@@ -23,11 +23,13 @@ pub mod radio;
 pub mod row;
 pub mod rule;
 pub mod scrollable;
+pub mod searchable_pick_list;
 pub mod slider;
 pub mod space;
 pub mod svg;
 pub mod text;
 pub mod text_input;
+pub mod text_input_shared;
 pub mod toggler;
 pub mod tooltip;
 
@@ -55,6 +57,8 @@ pub use row::Row;
 pub use rule::Rule;
 #[doc(no_inline)]
 pub use scrollable::Scrollable;
+#[doc(no_inline)]
+pub use searchable_pick_list::SearchablePickList;
 #[doc(no_inline)]
 pub use slider::Slider;
 #[doc(no_inline)]
